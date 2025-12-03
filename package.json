@@ -1,0 +1,11 @@
+{
+  "name": "nardoto-admin-licencas",
+  "version": "1.0.0",
+  "description": "Painel de Administração de Licenças - Nardoto Tools",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "author": "Nardoto",
+  "license": "MIT"
+}
