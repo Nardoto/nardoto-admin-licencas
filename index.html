@@ -470,9 +470,11 @@
         window.firebaseWhere = where;
 
         console.log('🔥 Firebase Admin initialized - Nardoto Tools v1.0.0');
-    </script>
 
-    <!-- Admin Logic -->
-    <script src="admin.js?v=1.0.0"></script>
+        // Carregar admin.js DEPOIS que Firebase estiver pronto
+        const script = document.createElement('script');
+        script.src = 'admin.js?v=1.0.1';
+        document.body.appendChild(script);
+    </script>
 </body>
 </html>
