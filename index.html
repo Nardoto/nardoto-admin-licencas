@@ -232,12 +232,12 @@
             margin-left: 0.5rem;
         }
 
-        .badge-pro {
+        .badge-kiwify {
             background: #10b98133;
             color: var(--success);
         }
 
-        .badge-free {
+        .badge-manual {
             background: #f59e0b33;
             color: var(--warning);
         }
@@ -245,6 +245,81 @@
         .badge-trial {
             background: #667eea33;
             color: var(--primary);
+        }
+
+        .badge-expired {
+            background: #ef444433;
+            color: var(--danger);
+        }
+
+        .badge-free {
+            background: #6b728033;
+            color: var(--text-light);
+        }
+
+        .user-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+
+        .user-details span {
+            display: inline-block;
+        }
+
+        .user-details strong {
+            color: var(--text);
+        }
+
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .user-item.kiwify {
+            border-left: 3px solid var(--success);
+        }
+
+        .user-item.manual {
+            border-left: 3px solid var(--warning);
+        }
+
+        .user-item.trial {
+            border-left: 3px solid var(--primary);
+        }
+
+        .user-item.trial_expired {
+            border-left: 3px solid var(--danger);
+        }
+
+        .user-item.free {
+            border-left: 3px solid var(--text-light);
         }
 
         .user-actions {
@@ -371,7 +446,7 @@
         <div class="container">
             <div class="header">
                 <div>
-                    <h1>Nardoto Tools - Admin <span class="version-badge">v1.0.0</span></h1>
+                    <h1>Nardoto Tools - Admin <span class="version-badge">v1.1.0</span></h1>
                     <p>Gerenciamento de Licenças</p>
                 </div>
                 <button onclick="logout()" class="logout-btn">Sair</button>
@@ -384,16 +459,20 @@
                     <div class="value" id="totalUsers">-</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Usuários PRO</h3>
-                    <div class="value" id="proUsers">-</div>
+                    <h3>Kiwify (Auto)</h3>
+                    <div class="value" id="kiwifyUsers" style="color: var(--success);">-</div>
                 </div>
                 <div class="stat-card">
-                    <h3>Usuários Grátis</h3>
-                    <div class="value" id="freeUsers">-</div>
+                    <h3>Manual (Cobrar)</h3>
+                    <div class="value" id="manualUsers" style="color: var(--warning);">-</div>
                 </div>
                 <div class="stat-card">
                     <h3>Em Teste</h3>
                     <div class="value" id="trialUsers">-</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Grátis</h3>
+                    <div class="value" id="freeUsers" style="color: var(--text-light);">-</div>
                 </div>
             </div>
 
@@ -416,9 +495,18 @@
             <div class="panel">
                 <h2>Gerenciar Usuários</h2>
 
+                <!-- Filtros por Tipo -->
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-filter="all" onclick="applyFilter('all')">Todos</button>
+                    <button class="filter-btn" data-filter="kiwify" onclick="applyFilter('kiwify')">Kiwify</button>
+                    <button class="filter-btn" data-filter="manual" onclick="applyFilter('manual')">Manual (Cobrar)</button>
+                    <button class="filter-btn" data-filter="trial" onclick="applyFilter('trial')">Em Teste</button>
+                    <button class="filter-btn" data-filter="free" onclick="applyFilter('free')">Grátis</button>
+                </div>
+
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Buscar por email..." onkeyup="filterUsers()">
+                    <input type="text" id="searchInput" placeholder="Buscar por email ou nome..." onkeyup="filterUsers()">
                 </div>
 
                 <button onclick="loadUsers()" class="btn" style="margin-bottom: 1rem;">
@@ -469,11 +557,11 @@
         window.firebaseQuery = query;
         window.firebaseWhere = where;
 
-        console.log('🔥 Firebase Admin initialized - Nardoto Tools v1.0.0');
+        console.log('🔥 Firebase Admin initialized - Nardoto Tools v1.1.0');
 
         // Carregar admin.js DEPOIS que Firebase estiver pronto
         const script = document.createElement('script');
-        script.src = 'admin.js?v=1.0.1';
+        script.src = 'admin.js?v=1.1.0';
         document.body.appendChild(script);
     </script>
 </body>

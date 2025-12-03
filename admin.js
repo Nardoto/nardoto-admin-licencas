@@ -1,13 +1,14 @@
 // ========================================
 // NARDOTO TOOLS - ADMIN DE LICENÇAS
-// Version: 1.0.0
+// Version: 1.1.0 - Controle de Cobrança
 // Desenvolvido por: Nardoto
 // ========================================
 
 let currentUser = null;
 let allUsers = [];
+let currentFilter = 'all';
 
-// Admin emails - Lista de administradores autorizados
+// Admin emails
 const ADMIN_EMAILS = [
     'tharcisionardoto@gmail.com',
     'nardotoengenharia@gmail.com'
@@ -28,11 +29,10 @@ window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
             loadUsers();
         } else {
             console.log('❌ Email não autorizado:', user.email);
-            showToast('❌ Acesso negado! Apenas administradores podem acessar.', 'error');
+            showToast('❌ Acesso negado!', 'error');
             setTimeout(() => logout(), 2000);
         }
     } else {
-        console.log('Nenhum usuário logado');
         showLoginScreen();
     }
 });
@@ -50,75 +50,83 @@ function showAdminPanel() {
 async function loginWithGoogle() {
     try {
         console.log('Iniciando login...');
-        const result = await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
-        console.log('✅ Login:', result.user.email);
+        await window.firebaseSignInWithPopup(window.firebaseAuth, window.firebaseProvider);
     } catch (error) {
         console.error('Erro no login:', error);
-        if (error.code === 'auth/popup-closed-by-user') {
-            showToast('⚠️ Login cancelado', 'warning');
-        } else {
-            showToast('❌ Erro: ' + error.message, 'error');
-        }
+        showToast('❌ Erro: ' + error.message, 'error');
     }
 }
 
 window.loginWithGoogle = loginWithGoogle;
 
 async function logout() {
-    try {
-        await window.firebaseSignOut(window.firebaseAuth);
-        showToast('✅ Logout realizado!', 'success');
-    } catch (error) {
-        console.error('Erro no logout:', error);
-    }
+    await window.firebaseSignOut(window.firebaseAuth);
+    showToast('✅ Logout!', 'success');
 }
 
 window.logout = logout;
 
 // ========================================
-// FUNÇÕES DE DATA (CORRIGIDAS PARA FIRESTORE)
+// FUNÇÕES DE DATA
 // ========================================
 
-// Converte qualquer formato de data para timestamp (ms)
 function getTimestamp(dateValue) {
     if (!dateValue) return 0;
-
-    // Firestore Timestamp tem o método toDate()
     if (dateValue.toDate && typeof dateValue.toDate === 'function') {
         return dateValue.toDate().getTime();
     }
-    // Firestore Timestamp também pode ter seconds
     if (dateValue.seconds) {
         return dateValue.seconds * 1000;
     }
-    // String ISO ou timestamp normal
     const date = new Date(dateValue);
     return isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 function formatDate(dateValue) {
-    if (!dateValue) return 'Data desconhecida';
-
+    if (!dateValue) return '-';
     let date;
-
-    // Firestore Timestamp tem o método toDate()
     if (dateValue.toDate && typeof dateValue.toDate === 'function') {
         date = dateValue.toDate();
-    }
-    // Firestore Timestamp também pode ter seconds
-    else if (dateValue.seconds) {
+    } else if (dateValue.seconds) {
         date = new Date(dateValue.seconds * 1000);
-    }
-    // String ISO ou timestamp normal
-    else {
+    } else {
         date = new Date(dateValue);
     }
-
-    if (isNaN(date.getTime())) {
-        return 'Data desconhecida';
-    }
-
+    if (isNaN(date.getTime())) return '-';
     return date.toLocaleDateString('pt-BR');
+}
+
+// ========================================
+// CLASSIFICAR USUÁRIO
+// ========================================
+
+function classifyUser(user) {
+    if (!user.isPro) return 'free';
+
+    const source = user.proActivatedBy || '';
+
+    if (source === 'kiwify' || source === 'kiwify_import') return 'kiwify';
+    if (source === 'trial') {
+        const expired = user.trialExpiresAt && new Date(user.trialExpiresAt) < new Date();
+        return expired ? 'trial_expired' : 'trial';
+    }
+    if (source === 'admin_manual' || source === 'admin_bulk') return 'manual';
+
+    // PRO sem fonte definida = manual
+    return 'manual';
+}
+
+function getSourceLabel(user) {
+    const source = user.proActivatedBy || '';
+
+    if (source === 'kiwify') return 'Kiwify (Auto)';
+    if (source === 'kiwify_import') return 'Kiwify (Import)';
+    if (source === 'trial') return 'Teste Grátis';
+    if (source === 'admin_manual') return 'Manual';
+    if (source === 'admin_bulk') return 'Manual (Lote)';
+
+    if (user.isPro) return 'Manual';
+    return '-';
 }
 
 // ========================================
@@ -138,26 +146,19 @@ async function loadUsers() {
 
         allUsers = [];
         snapshot.forEach((doc) => {
-            allUsers.push({
-                id: doc.id,
-                ...doc.data()
-            });
+            allUsers.push({ id: doc.id, ...doc.data() });
         });
 
         // Ordenar por data de criação (mais recentes primeiro)
-        allUsers.sort((a, b) => {
-            const dateA = getTimestamp(a.createdAt);
-            const dateB = getTimestamp(b.createdAt);
-            return dateB - dateA;
-        });
+        allUsers.sort((a, b) => getTimestamp(b.createdAt) - getTimestamp(a.createdAt));
 
         updateStats();
-        renderUsers(allUsers);
+        applyFilter(currentFilter);
 
         showToast(`✅ ${allUsers.length} usuários carregados!`, 'success');
     } catch (error) {
-        console.error('Erro ao carregar usuários:', error);
-        showToast('❌ Erro ao carregar usuários', 'error');
+        console.error('Erro:', error);
+        showToast('❌ Erro ao carregar', 'error');
     } finally {
         loading.classList.remove('show');
     }
@@ -167,15 +168,79 @@ window.loadUsers = loadUsers;
 
 function updateStats() {
     const total = allUsers.length;
-    const pro = allUsers.filter(u => u.isPro && u.proActivatedBy !== 'trial').length;
-    const trial = allUsers.filter(u => u.isPro && u.proActivatedBy === 'trial').length;
-    const free = total - pro - trial;
+    const kiwify = allUsers.filter(u => classifyUser(u) === 'kiwify').length;
+    const manual = allUsers.filter(u => classifyUser(u) === 'manual').length;
+    const trial = allUsers.filter(u => classifyUser(u) === 'trial').length;
+    const trialExpired = allUsers.filter(u => classifyUser(u) === 'trial_expired').length;
+    const free = allUsers.filter(u => classifyUser(u) === 'free').length;
 
     document.getElementById('totalUsers').textContent = total;
-    document.getElementById('proUsers').textContent = pro;
+    document.getElementById('kiwifyUsers').textContent = kiwify;
+    document.getElementById('manualUsers').textContent = manual;
+    document.getElementById('trialUsers').textContent = trial + trialExpired;
     document.getElementById('freeUsers').textContent = free;
-    document.getElementById('trialUsers').textContent = trial;
 }
+
+// ========================================
+// FILTROS
+// ========================================
+
+function applyFilter(filter) {
+    currentFilter = filter;
+
+    // Atualizar botões
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === filter) btn.classList.add('active');
+    });
+
+    let filtered = allUsers;
+
+    if (filter === 'kiwify') {
+        filtered = allUsers.filter(u => classifyUser(u) === 'kiwify');
+    } else if (filter === 'manual') {
+        filtered = allUsers.filter(u => classifyUser(u) === 'manual');
+    } else if (filter === 'trial') {
+        filtered = allUsers.filter(u => ['trial', 'trial_expired'].includes(classifyUser(u)));
+    } else if (filter === 'free') {
+        filtered = allUsers.filter(u => classifyUser(u) === 'free');
+    }
+
+    renderUsers(filtered);
+}
+
+window.applyFilter = applyFilter;
+
+function filterUsers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+    let filtered = allUsers;
+
+    // Aplicar filtro de tipo primeiro
+    if (currentFilter !== 'all') {
+        if (currentFilter === 'trial') {
+            filtered = filtered.filter(u => ['trial', 'trial_expired'].includes(classifyUser(u)));
+        } else {
+            filtered = filtered.filter(u => classifyUser(u) === currentFilter);
+        }
+    }
+
+    // Depois busca por texto
+    if (searchTerm) {
+        filtered = filtered.filter(user =>
+            user.email.toLowerCase().includes(searchTerm) ||
+            (user.displayName && user.displayName.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    renderUsers(filtered);
+}
+
+window.filterUsers = filterUsers;
+
+// ========================================
+// RENDERIZAR USUÁRIOS
+// ========================================
 
 function renderUsers(users) {
     const userList = document.getElementById('userList');
@@ -186,44 +251,59 @@ function renderUsers(users) {
     }
 
     userList.innerHTML = users.map(user => {
-        // Verificar tipo de usuário
-        const isTrial = user.isPro && user.proActivatedBy === 'trial';
-        const trialExpired = isTrial && user.trialExpiresAt && new Date(user.trialExpiresAt) < new Date();
+        const type = classifyUser(user);
+        const isTrial = type === 'trial';
+        const isTrialExpired = type === 'trial_expired';
 
-        // Calcular dias restantes do teste
+        // Dias restantes do teste
         let trialDaysLeft = 0;
         if (isTrial && user.trialExpiresAt) {
             const expiresAt = new Date(user.trialExpiresAt);
-            const now = new Date();
-            trialDaysLeft = Math.ceil((expiresAt - now) / (1000 * 60 * 60 * 24));
+            trialDaysLeft = Math.ceil((expiresAt - new Date()) / (1000 * 60 * 60 * 24));
         }
 
-        // Badge do status
-        let badgeClass = 'badge-free';
-        let badgeText = 'GRÁTIS';
-
-        if (user.isPro) {
-            if (isTrial) {
-                badgeClass = trialExpired ? 'badge-free' : 'badge-trial';
-                badgeText = trialExpired ? 'TESTE EXPIRADO' : `TESTE (${trialDaysLeft}d)`;
-            } else {
-                badgeClass = 'badge-pro';
-                badgeText = 'PRO';
-            }
+        // Badge
+        let badgeClass, badgeText;
+        switch(type) {
+            case 'kiwify':
+                badgeClass = 'badge-kiwify';
+                badgeText = 'KIWIFY';
+                break;
+            case 'manual':
+                badgeClass = 'badge-manual';
+                badgeText = 'MANUAL';
+                break;
+            case 'trial':
+                badgeClass = 'badge-trial';
+                badgeText = `TESTE (${trialDaysLeft}d)`;
+                break;
+            case 'trial_expired':
+                badgeClass = 'badge-expired';
+                badgeText = 'EXPIRADO';
+                break;
+            default:
+                badgeClass = 'badge-free';
+                badgeText = 'GRÁTIS';
         }
+
+        // Info de ativação
+        const activatedAt = user.proActivatedAt ? formatDate(user.proActivatedAt) : '-';
+        const source = getSourceLabel(user);
 
         return `
-            <div class="user-item" data-email="${user.email}">
+            <div class="user-item ${type}">
                 <div class="user-info">
                     <div class="user-email">
                         ${user.email}
                         <span class="badge ${badgeClass}">${badgeText}</span>
                     </div>
-                    <div class="user-status">
-                        ${user.displayName || 'Sem nome'} •
-                        ${user.translationsToday || 0} traduções hoje •
-                        Criado em ${formatDate(user.createdAt)}
-                        ${isTrial && !trialExpired ? ` • Expira em ${new Date(user.trialExpiresAt).toLocaleDateString('pt-BR')}` : ''}
+                    <div class="user-details">
+                        <span><strong>Nome:</strong> ${user.displayName || '-'}</span>
+                        <span><strong>Cadastro:</strong> ${formatDate(user.createdAt)}</span>
+                        ${user.isPro ? `<span><strong>Ativado:</strong> ${activatedAt}</span>` : ''}
+                        ${user.isPro ? `<span><strong>Origem:</strong> ${source}</span>` : ''}
+                        ${isTrial ? `<span><strong>Expira:</strong> ${formatDate(user.trialExpiresAt)}</span>` : ''}
+                        ${user.kiwifyOrderId ? `<span><strong>Kiwify ID:</strong> ${user.kiwifyOrderId}</span>` : ''}
                     </div>
                 </div>
                 <div class="user-actions">
@@ -243,24 +323,12 @@ function renderUsers(users) {
 
 async function togglePro(userId, email, activate) {
     if (activate) {
-        const planChoice = prompt(
-            `Escolha o plano para ${email}:\n\n` +
-            `1 - BÁSICO\n` +
-            `2 - VIP (Tudo liberado)\n\n` +
-            `Digite 1 ou 2:`
-        );
-
-        let plan = planChoice === '2' ? 'vip' : 'basic';
-        let features = plan === 'vip' ? ['all-features'] : ['veo3-automator', 'wisk-automator', 'tradutor-ai-unlimited'];
-
-        if (!confirm(`Ativar plano ${plan.toUpperCase()} para ${email}?`)) return;
+        if (!confirm(`Ativar PRO MANUAL para ${email}?\n\n(Você irá cobrar manualmente)`)) return;
 
         try {
             const userRef = window.firebaseDoc(window.firebaseDb, 'users', userId);
             await window.firebaseUpdateDoc(userRef, {
-                plan: plan,
                 isPro: true,
-                features: features,
                 proActivatedBy: 'admin_manual',
                 proActivatedAt: new Date().toISOString()
             });
@@ -268,8 +336,7 @@ async function togglePro(userId, email, activate) {
             showToast(`✅ PRO ativado para ${email}!`, 'success');
             await loadUsers();
         } catch (error) {
-            console.error('Erro:', error);
-            showToast('❌ Erro ao ativar PRO', 'error');
+            showToast('❌ Erro', 'error');
         }
     } else {
         if (!confirm(`Desativar PRO para ${email}?`)) return;
@@ -277,18 +344,15 @@ async function togglePro(userId, email, activate) {
         try {
             const userRef = window.firebaseDoc(window.firebaseDb, 'users', userId);
             await window.firebaseUpdateDoc(userRef, {
-                plan: 'free',
                 isPro: false,
-                features: [],
                 proActivatedBy: null,
                 proActivatedAt: null
             });
 
-            showToast(`✅ PRO desativado para ${email}!`, 'success');
+            showToast(`✅ PRO desativado!`, 'success');
             await loadUsers();
         } catch (error) {
-            console.error('Erro:', error);
-            showToast('❌ Erro ao desativar PRO', 'error');
+            showToast('❌ Erro', 'error');
         }
     }
 }
@@ -296,33 +360,27 @@ async function togglePro(userId, email, activate) {
 window.togglePro = togglePro;
 
 // ========================================
-// ATIVAÇÃO TESTE GRÁTIS (3 DIAS)
+// TESTE GRÁTIS
 // ========================================
 
 async function activateTrials() {
     const emailList = document.getElementById('trialEmailList').value;
 
     if (!emailList.trim()) {
-        showToast('⚠️ Cole a lista de emails primeiro!', 'warning');
+        showToast('⚠️ Cole os emails primeiro!', 'warning');
         return;
     }
 
-    const emails = emailList
-        .split('\n')
-        .map(e => e.trim().toLowerCase())
-        .filter(e => e && e.includes('@'));
+    const emails = emailList.split('\n').map(e => e.trim().toLowerCase()).filter(e => e && e.includes('@'));
 
     if (emails.length === 0) {
-        showToast('⚠️ Nenhum email válido encontrado!', 'warning');
+        showToast('⚠️ Nenhum email válido!', 'warning');
         return;
     }
 
-    if (!confirm(`Ativar teste grátis de 3 dias para ${emails.length} usuários?`)) return;
+    if (!confirm(`Ativar teste grátis (3 dias) para ${emails.length} usuários?`)) return;
 
-    let activated = 0;
-    let pending = 0;
-
-    showToast(`⏳ Ativando teste para ${emails.length} usuários...`, 'info');
+    let activated = 0, pending = 0;
 
     try {
         const usersRef = window.firebaseCollection(window.firebaseDb, 'users');
@@ -334,17 +392,13 @@ async function activateTrials() {
             userMap.set(data.email.toLowerCase(), { id: doc.id, ...data });
         });
 
-        const trialDuration = 3 * 24 * 60 * 60 * 1000;
-        const trialExpiresAt = new Date(Date.now() + trialDuration).toISOString();
+        const trialExpiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
         for (const email of emails) {
             const user = userMap.get(email);
 
             if (user) {
-                if (user.isPro && user.proActivatedBy === 'kiwify') {
-                    console.log(`⏭️ Pulando ${email} - Já é PRO pago`);
-                    continue;
-                }
+                if (user.isPro && user.proActivatedBy === 'kiwify') continue;
 
                 const userRef = window.firebaseDoc(window.firebaseDb, 'users', user.id);
                 await window.firebaseUpdateDoc(userRef, {
@@ -353,37 +407,26 @@ async function activateTrials() {
                     proActivatedAt: new Date().toISOString(),
                     trialExpiresAt: trialExpiresAt
                 });
-
                 activated++;
             } else {
                 const pendingRef = window.firebaseCollection(window.firebaseDb, 'pending_activations');
-                const pendingQuery = window.firebaseQuery(pendingRef, window.firebaseWhere('email', '==', email));
-                const pendingSnap = await window.firebaseGetDocs(pendingQuery);
-
-                if (pendingSnap.empty) {
-                    await window.firebaseAddDoc(pendingRef, {
-                        email: email,
-                        orderId: `TRIAL-${Date.now()}`,
-                        trialExpiresAt: trialExpiresAt,
-                        createdAt: new Date().toISOString(),
-                        status: 'pending',
-                        source: 'trial'
-                    });
-                }
+                await window.firebaseAddDoc(pendingRef, {
+                    email: email,
+                    orderId: `TRIAL-${Date.now()}`,
+                    trialExpiresAt: trialExpiresAt,
+                    createdAt: new Date().toISOString(),
+                    status: 'pending',
+                    source: 'trial'
+                });
                 pending++;
             }
         }
 
-        let msg = `✅ Teste ativado!\n`;
-        if (activated > 0) msg += `${activated} usuários ativados\n`;
-        if (pending > 0) msg += `${pending} pendentes (aguardando login)`;
-
-        showToast(msg, 'success');
+        showToast(`✅ ${activated} ativados, ${pending} pendentes`, 'success');
         await loadUsers();
         document.getElementById('trialEmailList').value = '';
 
     } catch (error) {
-        console.error('Erro:', error);
         showToast('❌ Erro: ' + error.message, 'error');
     }
 }
@@ -391,29 +434,7 @@ async function activateTrials() {
 window.activateTrials = activateTrials;
 
 // ========================================
-// FILTRO DE BUSCA
-// ========================================
-
-function filterUsers() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-
-    if (!searchTerm) {
-        renderUsers(allUsers);
-        return;
-    }
-
-    const filtered = allUsers.filter(user =>
-        user.email.toLowerCase().includes(searchTerm) ||
-        (user.displayName && user.displayName.toLowerCase().includes(searchTerm))
-    );
-
-    renderUsers(filtered);
-}
-
-window.filterUsers = filterUsers;
-
-// ========================================
-// TOAST NOTIFICATION
+// TOAST
 // ========================================
 
 function showToast(message, type = 'info') {
@@ -426,10 +447,7 @@ function showToast(message, type = 'info') {
         '#667eea';
 
     toast.classList.add('show');
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 4000);
+    setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-console.log('⚙️ Nardoto Tools Admin v1.0.0');
+console.log('⚙️ Nardoto Tools Admin v1.1.0');
