@@ -77,7 +77,7 @@
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -98,9 +98,20 @@
         }
 
         .stat-card .value {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--primary);
+        }
+
+        .stat-card .sub-value {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.financial {
+            background: linear-gradient(135deg, #10b98122 0%, #16213e 100%);
+            border-color: var(--success);
         }
 
         .panel {
@@ -132,7 +143,8 @@
         }
 
         .form-group input,
-        .form-group textarea {
+        .form-group textarea,
+        .form-group select {
             width: 100%;
             padding: 0.75rem;
             border: 2px solid var(--border);
@@ -145,13 +157,14 @@
         }
 
         .form-group input:focus,
-        .form-group textarea:focus {
+        .form-group textarea:focus,
+        .form-group select:focus {
             outline: none;
             border-color: var(--primary);
         }
 
         .form-group textarea {
-            min-height: 150px;
+            min-height: 100px;
             resize: vertical;
         }
 
@@ -188,6 +201,10 @@
             background: #dc2626;
         }
 
+        .btn-primary {
+            background: var(--primary);
+        }
+
         .user-list {
             margin-top: 1rem;
         }
@@ -195,17 +212,19 @@
         .user-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             padding: 1rem;
             border: 1px solid var(--border);
             border-radius: 8px;
             margin-bottom: 0.5rem;
             background: var(--bg);
             transition: all 0.2s;
+            cursor: pointer;
         }
 
         .user-item:hover {
             border-color: var(--primary);
+            background: #1f2544;
         }
 
         .user-info {
@@ -216,6 +235,10 @@
             font-weight: 600;
             margin-bottom: 0.25rem;
             color: var(--text);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .user-status {
@@ -229,7 +252,6 @@
             border-radius: 12px;
             font-size: 0.75rem;
             font-weight: 600;
-            margin-left: 0.5rem;
         }
 
         .badge-kiwify {
@@ -325,6 +347,7 @@
         .user-actions {
             display: flex;
             gap: 0.5rem;
+            flex-shrink: 0;
         }
 
         .btn-sm {
@@ -425,6 +448,270 @@
             font-size: 0.7rem;
             margin-left: 0.5rem;
         }
+
+        /* Financial badges */
+        .financial-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
+        .financial-badge.has-value {
+            background: #10b98133;
+            color: var(--success);
+        }
+
+        .financial-badge.no-value {
+            background: #ef444433;
+            color: var(--danger);
+        }
+
+        .last-payment {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-left: 0.5rem;
+        }
+
+        .notes-preview {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            font-style: italic;
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+            border-left: 2px solid var(--primary);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card);
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--card);
+            z-index: 10;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: var(--text);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--text);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-section h3 {
+            color: var(--text);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .info-item {
+            background: var(--bg);
+            padding: 0.75rem;
+            border-radius: 8px;
+        }
+
+        .info-item label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+        }
+
+        .info-item span {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        /* Payment History */
+        .payment-history {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .payment-item:last-child {
+            border-bottom: none;
+        }
+
+        .payment-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .payment-info strong {
+            color: var(--success);
+        }
+
+        .payment-info span {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .payment-info small {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .payment-total {
+            padding: 0.75rem;
+            background: #10b98122;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            text-align: right;
+        }
+
+        .payment-total strong {
+            color: var(--success);
+        }
+
+        .no-payments {
+            text-align: center;
+            color: var(--text-light);
+            padding: 1rem;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            font-size: 1rem;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .btn-icon:hover {
+            opacity: 1;
+        }
+
+        .add-payment-form {
+            background: var(--bg);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .add-payment-form h4 {
+            margin-bottom: 1rem;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .form-inline {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .form-inline input {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            position: sticky;
+            bottom: 0;
+            background: var(--card);
+        }
+
+        @media (max-width: 600px) {
+            .info-grid, .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-inline {
+                flex-direction: column;
+            }
+
+            .form-inline input {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -446,8 +733,8 @@
         <div class="container">
             <div class="header">
                 <div>
-                    <h1>Nardoto Tools - Admin <span class="version-badge">v1.1.0</span></h1>
-                    <p>Gerenciamento de Licenças</p>
+                    <h1>Nardoto Tools - Admin <span class="version-badge">v1.2.0</span></h1>
+                    <p>Gerenciamento de Licenças e Cobranças</p>
                 </div>
                 <button onclick="logout()" class="logout-btn">Sair</button>
             </div>
@@ -473,6 +760,11 @@
                 <div class="stat-card">
                     <h3>Grátis</h3>
                     <div class="value" id="freeUsers" style="color: var(--text-light);">-</div>
+                </div>
+                <div class="stat-card financial">
+                    <h3>Receita Mensal (Manual)</h3>
+                    <div class="value" id="monthlyRevenue" style="color: var(--success);">-</div>
+                    <div class="sub-value">Usuários com valor: <span id="paidUsersCount">-</span></div>
                 </div>
             </div>
 
@@ -506,7 +798,7 @@
 
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" placeholder="Buscar por email ou nome..." onkeyup="filterUsers()">
+                    <input type="text" id="searchInput" placeholder="Buscar por email, nome ou observação..." onkeyup="filterUsers()">
                 </div>
 
                 <button onclick="loadUsers()" class="btn" style="margin-bottom: 1rem;">
@@ -515,6 +807,99 @@
 
                 <div class="loading" id="loading">Carregando usuários...</div>
                 <div class="user-list" id="userList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Detalhes do Usuário</h2>
+                <button class="modal-close" onclick="closeUserModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Info Básica -->
+                <div class="modal-section">
+                    <h3>Informações Básicas</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Email</label>
+                            <span id="modalUserEmail">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Nome</label>
+                            <span id="modalUserName">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Tipo</label>
+                            <span id="modalUserType">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Cadastro</label>
+                            <span id="modalCreatedAt">-</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Ativação PRO</label>
+                            <span id="modalActivatedAt">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contato e Valor -->
+                <div class="modal-section">
+                    <h3>Contato e Cobrança</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Contato (WhatsApp/Tel)</label>
+                            <input type="text" id="userContactInfo" placeholder="(11) 99999-9999">
+                        </div>
+                        <div class="form-group">
+                            <label>Valor Mensal (R$)</label>
+                            <input type="number" id="userMonthlyValue" placeholder="0.00" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Ativação</label>
+                        <select id="userActivationType">
+                            <option value="admin_manual">Manual (Cobrança Normal)</option>
+                            <option value="gift">Presente (Sem Cobrança)</option>
+                            <option value="admin_bulk">Manual (Lote)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Observações -->
+                <div class="modal-section">
+                    <h3>Observações</h3>
+                    <div class="form-group">
+                        <textarea id="userNotes" placeholder="Anotações sobre o cliente, acordos, primeira mensalidade diferente, etc..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Histórico de Pagamentos -->
+                <div class="modal-section">
+                    <h3>Histórico de Pagamentos</h3>
+                    <div class="payment-history" id="paymentHistory">
+                        <p class="no-payments">Nenhum pagamento registrado</p>
+                    </div>
+
+                    <div class="add-payment-form">
+                        <h4>Registrar Novo Pagamento</h4>
+                        <div class="form-inline">
+                            <input type="date" id="newPaymentDate" placeholder="Data">
+                            <input type="number" id="newPaymentValue" placeholder="Valor (R$)" step="0.01">
+                            <input type="text" id="newPaymentNote" placeholder="Observação (opcional)">
+                            <button onclick="addPayment()" class="btn btn-success btn-sm">Adicionar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="closeUserModal()" class="btn" style="background: var(--border);">Cancelar</button>
+                <button onclick="saveUserDetails()" class="btn btn-success">Salvar Alterações</button>
             </div>
         </div>
     </div>
@@ -557,11 +942,11 @@
         window.firebaseQuery = query;
         window.firebaseWhere = where;
 
-        console.log('🔥 Firebase Admin initialized - Nardoto Tools v1.1.0');
+        console.log('🔥 Firebase Admin initialized - Nardoto Tools v1.2.0');
 
         // Carregar admin.js DEPOIS que Firebase estiver pronto
         const script = document.createElement('script');
-        script.src = 'admin.js?v=1.1.0';
+        script.src = 'admin.js?v=1.2.0';
         document.body.appendChild(script);
     </script>
 </body>
